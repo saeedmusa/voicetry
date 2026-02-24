@@ -1,0 +1,21 @@
+{
+  "id": "modular-refactor-19",
+  "seq": "19",
+  "title": "Update requirements.txt",
+  "status": "pending",
+  "depends_on": ["18"],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [],
+  "reference_files": [
+    "requirements.txt",
+    "src/main.py"
+  ],
+  "acceptance_criteria": [
+    "requirements.txt includes all necessary dependencies",
+    "Versions are compatible with new module structure"
+  ],
+  "deliverables": [
+    "requirements.txt"
+  ]
+}

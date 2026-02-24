@@ -1,0 +1,22 @@
+{
+  "id": "modular-refactor-14",
+  "seq": "14",
+  "title": "Create ui/visualizer.py",
+  "status": "pending",
+  "depends_on": ["13"],
+  "parallel": true,
+  "suggested_agent": "CoderAgent",
+  "context_files": [],
+  "reference_files": [
+    "src/ui.py",
+    "src/ui/config.py"
+  ],
+  "acceptance_criteria": [
+    "Visualizer component for audio bar display",
+    "Simple synchronous implementation (no async)",
+    "Uses color palette from config.py"
+  ],
+  "deliverables": [
+    "src/ui/visualizer.py"
+  ]
+}

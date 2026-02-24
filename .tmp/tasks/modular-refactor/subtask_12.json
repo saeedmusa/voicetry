@@ -1,0 +1,21 @@
+{
+  "id": "modular-refactor-12",
+  "seq": "12",
+  "title": "Create text_to_speech/__init__.py",
+  "status": "pending",
+  "depends_on": ["10", "11"],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [],
+  "reference_files": [
+    "src/text_to_speech/synthesizer.py",
+    "src/text_to_speech/player.py"
+  ],
+  "acceptance_criteria": [
+    "__init__.py exposes Synthesizer and Player classes",
+    "Clean public API for the module"
+  ],
+  "deliverables": [
+    "src/text_to_speech/__init__.py"
+  ]
+}

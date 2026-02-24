@@ -1,0 +1,26 @@
+{
+  "id": "modular-refactor-02",
+  "seq": "02",
+  "title": "Create speech_to_text/recorder.py",
+  "status": "completed",
+  "agent_id": "coder-agent",
+  "started_at": "2026-02-23T00:00:00Z",
+  "completed_at": "2026-02-23T00:00:00Z",
+  "completion_summary": "Simple synchronous recorder with level callbacks",
+  "depends_on": ["01"],
+  "parallel": true,
+  "suggested_agent": "CoderAgent",
+  "context_files": [],
+  "reference_files": [
+    "src/audio/recorder.py",
+    "src/speech_to_text/config.py"
+  ],
+  "acceptance_criteria": [
+    "Recorder class captures audio from microphone",
+    "Simple synchronous implementation (no async)",
+    "Uses settings from config.py"
+  ],
+  "deliverables": [
+    "src/speech_to_text/recorder.py"
+  ]
+}

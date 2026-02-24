@@ -1,0 +1,21 @@
+{
+  "id": "modular-refactor-04",
+  "seq": "04",
+  "title": "Create speech_to_text/__init__.py",
+  "status": "pending",
+  "depends_on": ["02", "03"],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [],
+  "reference_files": [
+    "src/speech_to_text/recorder.py",
+    "src/speech_to_text/transcriber.py"
+  ],
+  "acceptance_criteria": [
+    "__init__.py exposes Recorder and Transcriber classes",
+    "Clean public API for the module"
+  ],
+  "deliverables": [
+    "src/speech_to_text/__init__.py"
+  ]
+}

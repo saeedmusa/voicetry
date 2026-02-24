@@ -1,0 +1,27 @@
+{
+  "id": "modular-refactor",
+  "name": "Modular Refactor of VoiceTry",
+  "status": "active",
+  "objective": "Refactor VoiceTry into 4 independent modules with simple synchronous code",
+  "context_files": [],
+  "reference_files": [
+    "src/main.py",
+    "src/ui.py",
+    "src/audio/recorder.py",
+    "src/audio/player.py",
+    "src/stt/whisper.py",
+    "src/llm/deepseek.py",
+    "src/llm/base.py",
+    "src/tts/kokoro.py",
+    "requirements.txt"
+  ],
+  "exit_criteria": [
+    "All 4 modules created independently with __init__.py",
+    "Each module has its own config.py",
+    "main.py orchestrates all modules",
+    "Original functionality preserved"
+  ],
+  "subtask_count": 19,
+  "completed_count": 0,
+  "created_at": "2025-02-23T00:00:00Z"
+}

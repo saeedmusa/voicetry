@@ -1,0 +1,21 @@
+{
+  "id": "modular-refactor-08",
+  "seq": "08",
+  "title": "Create llm_processor/__init__.py",
+  "status": "pending",
+  "depends_on": ["06", "07"],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [],
+  "reference_files": [
+    "src/llm_processor/interface.py",
+    "src/llm_processor/deepseek.py"
+  ],
+  "acceptance_criteria": [
+    "__init__.py exposes BaseLLM, Message, StreamChunk, DeepSeekLLM",
+    "Clean public API for the module"
+  ],
+  "deliverables": [
+    "src/llm_processor/__init__.py"
+  ]
+}

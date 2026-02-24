@@ -1,0 +1,26 @@
+{
+  "id": "modular-refactor-18",
+  "seq": "18",
+  "title": "Create new main.py orchestrator",
+  "status": "pending",
+  "depends_on": ["04", "08", "12", "17"],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [],
+  "reference_files": [
+    "src/main.py",
+    "src/speech_to_text",
+    "src/llm_processor",
+    "src/text_to_speech",
+    "src/ui"
+  ],
+  "acceptance_criteria": [
+    "main.py orchestrates all 4 modules",
+    "Simple synchronous implementation (no async)",
+    "Maintains all original functionality",
+    "Clean and readable code"
+  ],
+  "deliverables": [
+    "src/main.py"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "modular-refactor-06",
+  "seq": "06",
+  "title": "Create llm_processor/interface.py",
+  "status": "completed",
+  "agent_id": "coder-agent",
+  "started_at": "2026-02-23T00:00:00Z",
+  "completed_at": "2026-02-23T00:00:00Z",
+  "completion_summary": "Created llm_processor/interface.py with BaseLLM, Message, StreamChunk, ConversationHistory",
+  "depends_on": ["05"],
+  "parallel": true,
+  "suggested_agent": "CoderAgent",
+  "context_files": [],
+  "reference_files": [
+    "src/llm/base.py",
+    "src/llm_processor/config.py"
+  ],
+  "acceptance_criteria": [
+    "BaseLLM abstract base class",
+    "Message and StreamChunk data classes",
+    "Minimal type hints for readability"
+  ],
+  "deliverables": [
+    "src/llm_processor/interface.py"
+  ]
+}

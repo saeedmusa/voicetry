@@ -1,0 +1,26 @@
+{
+  "id": "modular-refactor-15",
+  "seq": "15",
+  "title": "Create ui/terminal.py",
+  "status": "completed",
+  "agent_id": "coder-agent",
+  "started_at": "2026-02-23T00:00:00Z",
+  "completed_at": "2026-02-23T00:00:00Z",
+  "completion_summary": "Created ui/terminal.py with VoiceTerminalUI class extracted from src/ui.py, featuring header, visualizer, status, and message panels using Colors and AppState from config.py",
+  "depends_on": ["13"],
+  "parallel": true,
+  "suggested_agent": "CoderAgent",
+  "context_files": [],
+  "reference_files": [
+    "src/ui.py",
+    "src/ui/config.py"
+  ],
+  "acceptance_criteria": [
+    "Terminal UI panels implementation",
+    "Simple synchronous implementation (no async)",
+    "Uses state definitions from config.py"
+  ],
+  "deliverables": [
+    "src/ui/terminal.py"
+  ]
+}

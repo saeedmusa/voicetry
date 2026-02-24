@@ -1,0 +1,25 @@
+{
+  "id": "modular-refactor-01",
+  "seq": "01",
+  "title": "Create speech_to_text/config.py",
+  "status": "completed",
+  "agent_id": "coder-agent",
+  "started_at": "2026-02-23T00:00:00Z",
+  "completed_at": "2026-02-23T00:00:00Z",
+  "depends_on": [],
+  "parallel": true,
+  "suggested_agent": "CoderAgent",
+  "context_files": [],
+  "reference_files": [
+    "src/audio/recorder.py",
+    "src/stt/whisper.py"
+  ],
+  "acceptance_criteria": [
+    "config.py contains recording settings (sample_rate, channels, chunk_size)",
+    "config.py contains Whisper model options (model_name, language, device)",
+    "Config is simple and self-contained"
+  ],
+  "deliverables": [
+    "src/speech_to_text/config.py"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "modular-refactor-03",
+  "title": "Create speech_to_text/transcriber.py",
+  "seq": "03",
+  "status": "completed",
+  "agent_id": "coder-agent",
+  "started_at": "2026-02-23T00:00:00Z",
+  "completed_at": "2026-02-23T00:00:00Z",
+  "depends_on": ["01"],
+  "parallel": true,
+  "suggested_agent": "CoderAgent",
+  "context_files": [],
+  "reference_files": [
+    "src/stt/whisper.py",
+    "src/speech_to_text/config.py"
+  ],
+  "acceptance_criteria": [
+    "Transcriber class uses Whisper model",
+    "Simple synchronous implementation (no async)",
+    "Uses settings from config.py"
+  ],
+  "deliverables": [
+    "src/speech_to_text/transcriber.py"
+  ]
+}

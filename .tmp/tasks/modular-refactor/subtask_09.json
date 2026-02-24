@@ -1,0 +1,26 @@
+{
+  "id": "modular-refactor-09",
+  "seq": "09",
+  "title": "Create text_to_speech/config.py",
+  "status": "completed",
+  "agent_id": "coder-agent",
+  "started_at": "2026-01-28T00:00:00Z",
+  "completed_at": "2026-02-23T00:00:00Z",
+  "completion_summary": "Created TTSConfig dataclass with voice and synthesis settings"
+  "depends_on": [],
+  "parallel": true,
+  "suggested_agent": "CoderAgent",
+  "context_files": [],
+  "reference_files": [
+    "src/tts/kokoro.py",
+    "src/audio/player.py"
+  ],
+  "acceptance_criteria": [
+    "config.py contains voice settings (voice_name, language)",
+    "config.py contains synthesis settings (speed, sample_rate)",
+    "Config is simple and self-contained"
+  ],
+  "deliverables": [
+    "src/text_to_speech/config.py"
+  ]
+}

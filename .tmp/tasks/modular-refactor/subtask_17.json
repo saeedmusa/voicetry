@@ -1,0 +1,22 @@
+{
+  "id": "modular-refactor-17",
+  "seq": "17",
+  "title": "Create ui/__init__.py",
+  "status": "pending",
+  "depends_on": ["14", "15", "16"],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [],
+  "reference_files": [
+    "src/ui/visualizer.py",
+    "src/ui/terminal.py",
+    "src/ui/animator.py"
+  ],
+  "acceptance_criteria": [
+    "__init__.py exposes Visualizer, Terminal, Animator classes",
+    "Clean public API for the module"
+  ],
+  "deliverables": [
+    "src/ui/__init__.py"
+  ]
+}
