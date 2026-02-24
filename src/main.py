@@ -75,7 +75,8 @@ def print_banner(console: Console) -> None:
     console.print("  [bold green]1.[/] Press [bold yellow]ENTER[/] to start the voice terminal")
     console.print("  [bold green]2.[/] Press [bold yellow]SPACE[/] to start/stop recording")
     console.print("  [bold green]3.[/] Press [bold yellow]V[/] to change voice")
-    console.print("  [bold green]4.[/] Press [bold yellow]Q[/] to quit")
+    console.print("  [bold green]4.[/] Press [bold yellow]E[/] to switch TTS engine")
+    console.print("  [bold green]5.[/] Press [bold yellow]Q[/] to quit")
     console.print()
 
 
@@ -161,9 +162,6 @@ class VoiceTryApp:
     def synthesizer(self):
         if self._synthesizer is None:
             config = self.voice_selector.get_config()
-            # Use Piper - faster on CPU
-            config.engine = "piper"
-            config.sample_rate = 16000  # Piper uses 16kHz
             self.console.print(f"[dim]Loading {config.engine.upper()} TTS...[/]")
             self._synthesizer = get_synthesizer(config)
         return self._synthesizer
@@ -172,8 +170,6 @@ class VoiceTryApp:
     def player(self) -> TTSPlayer:
         if self._player is None:
             config = self.voice_selector.get_config()
-            config.engine = "piper"
-            config.sample_rate = 16000  # Piper uses 16kHz
             self._player = TTSPlayer(config)
             self._player.set_level_callback(self._on_audio_level)
         return self._player
@@ -195,7 +191,7 @@ and naturally, as if having a voice conversation. Keep responses relatively brie
         self.console.print("[bold green]✓[/] Initializing modules...")
         self.console.print("[dim]  • DeepSeek API: Connected[/]")
         self.console.print("[dim]  • Whisper: Ready (will load on first use)[/]")
-        self.console.print("[dim]  • Piper TTS: Ready (will load on first use)[/]")
+        self.console.print(f"[dim]  • {self.voice_selector.current_engine.upper()} TTS: Ready (will load on first use)[/]")
         self.console.print()
         self.console.print("[bold cyan]Press ENTER to start the voice terminal...[/]")
         input()
@@ -219,11 +215,21 @@ and naturally, as if having a voice conversation. Keep responses relatively brie
             if key.lower() == 'q':
                 break
 
+            if key.lower() == 'e':
+                self._handle_engine_selection()
+
             if key.lower() == 'v':
                 self._handle_voice_selection()
 
             if key == ' ':
                 self._handle_recording()
+
+    def _handle_engine_selection(self) -> None:
+        """Handle TTS engine selection menu."""
+        self.voice_selector.select_engine()
+        # Reset synthesizer and player to reload with new engine
+        self._synthesizer = None
+        self._player = None
 
     def _handle_voice_selection(self) -> None:
         """Handle voice selection menu."""
