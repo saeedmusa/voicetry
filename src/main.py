@@ -160,8 +160,10 @@ class VoiceTryApp:
     @property
     def synthesizer(self) -> Synthesizer:
         if self._synthesizer is None:
-            self.console.print("[dim]Loading Kokoro TTS...[/]")
             config = self.voice_selector.get_config()
+            # Use Kokoro by default - faster than waiting for Piper model download
+            config.engine = "kokoro"
+            self.console.print(f"[dim]Loading {config.engine.upper()} TTS...[/]")
             self._synthesizer = Synthesizer(config)
         return self._synthesizer
 
@@ -169,6 +171,7 @@ class VoiceTryApp:
     def player(self) -> TTSPlayer:
         if self._player is None:
             config = self.voice_selector.get_config()
+            config.engine = "kokoro"
             self._player = TTSPlayer(config)
             self._player.set_level_callback(self._on_audio_level)
         return self._player
