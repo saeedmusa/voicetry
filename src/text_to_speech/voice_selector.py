@@ -1,12 +1,13 @@
-"""Voice selector for TTS."""
+"""Voice and engine selector for TTS."""
 
 import sys
-from typing import Optional, Literal
+from typing import Optional
 
 import readchar
 from rich.console import Console
 
 from .config import TTSConfig
+from .engines import get_engine
 
 
 class VoiceSelector:
@@ -14,8 +15,8 @@ class VoiceSelector:
 
     def __init__(self, console: Optional[Console] = None):
         self.console = console or Console()
-        self._current_voice: str = TTSConfig.voice_name
-        self._current_engine: Literal["kokoro", "piper"] = "piper"
+        self._current_voice: str = "en_US_lessac_medium"
+        self._current_engine: str = "piper"
 
     @property
     def current_voice(self) -> str:
@@ -26,49 +27,20 @@ class VoiceSelector:
         return self._current_engine
 
     @property
-    def available_voices(self) -> list[str]:
-        if self._current_engine == "piper":
-            return self._get_piper_voices()
-        return TTSConfig.KOKORO_VOICES
+    def available_voices(self):
+        engine_class = get_engine(self._current_engine)
+        return engine_class.voices  # Access as class property
 
-    def _get_piper_voices(self) -> list[str]:
-        """Get list of available Piper voices."""
-        return [
-            "en_US_lessac_medium",
-            "en_US_lessac_low", 
-            "en_US_amy_medium",
-            "en_US_ryan_medium",
-            "en_US_ljspeech_medium",
-            "en_US_libritts_medium",
-        ]
+    def get_current_engine(self):
+        """Get the current engine instance to access descriptions."""
+        engine_class = get_engine(self._current_engine)
+        return engine_class(TTSConfig())
 
     def get_voice_description(self, voice: str) -> str:
-        """Get description for a voice."""
-        # Kokoro descriptions
-        kokoro_descriptions = {
-            "af_bella": "Female, American",
-            "af_heart": "Female, warm",
-            "af_sarah": "Female, clear",
-            "af_sky": "Female",
-            "am_adam": "Male, American",
-            "am_michael": "Male, American",
-            "bf_emma": "Female, British",
-            "bm_george": "Male, British",
-        }
-        
-        # Piper descriptions
-        piper_descriptions = {
-            "en_US_lessac_medium": "Lessac (Medium)",
-            "en_US_lessac_low": "Lessac (Low - Fastest)",
-            "en_US_amy_medium": "Amy (Female)",
-            "en_US_ryan_medium": "Ryan (Male)",
-            "en_US_ljspeech_medium": "LJ Speech (Female)",
-            "en_US_libritts_medium": "LibriTTS (Female)",
-        }
-        
-        if self._current_engine == "piper":
-            return piper_descriptions.get(voice, "")
-        return kokoro_descriptions.get(voice, "")
+        """Get description for a voice from the current engine."""
+        engine = self.get_current_engine()
+        descriptions = getattr(engine, 'voice_descriptions', {})
+        return descriptions.get(voice, "")
 
     def select_engine(self) -> str:
         """Display engine selection menu."""
@@ -116,10 +88,8 @@ class VoiceSelector:
                     elif key == '\r' or key == '\n':
                         self._current_engine = engines[selected_index][0]
                         # Reset voice to first available for new engine
-                        if self._current_engine == "piper":
-                            self._current_voice = "en_US_lessac_medium"
-                        else:
-                            self._current_voice = "af_heart"
+                        engine_class = get_engine(self._current_engine)
+                        self._current_voice = engine_class.voices[0]
                         self.console.print()
                         self.console.print(f"[bold green]✓[/] Engine changed to: [bold]{self._current_engine.upper()}[/]")
                         return self._current_engine
@@ -172,7 +142,7 @@ class VoiceSelector:
             is_selected = i == selected_index
             marker = "▶" if is_selected else " "
             voice_style = "bold green" if is_selected else "white"
-            self.console.print(f"  {marker} [bold]{i + 1}.[/] [{voice_style}]{voice:<22}[/] {desc}")
+            self.console.print(f"  {marker} [bold]{i + 1}.[/] [{voice_style}]{voice:<25}[/] {desc}")
 
         self.console.print()
         self.console.print(f"[dim]↑/↓ navigate • ENTER select • ESC cancel • E switch engine[/]")
@@ -220,9 +190,7 @@ class VoiceSelector:
                         return self._current_voice
 
                     elif key.lower() == 'e':
-                        # Switch engine
                         self.select_engine()
-                        # Re-render voice menu with new engine's voices
                         voices = self.available_voices
                         selected_index = 0 if not voices else min(selected_index, len(voices) - 1)
                         self._render_menu(selected_index)
@@ -237,8 +205,8 @@ class VoiceSelector:
 
     def get_config(self) -> TTSConfig:
         """Get TTSConfig with current voice and engine."""
-        config = TTSConfig()
-        config.voice_name = self._current_voice
-        config.engine = self._current_engine
-        config.sample_rate = 16000 if self._current_engine == "piper" else 24000
-        return config
+        return TTSConfig(
+            voice_name=self._current_voice,
+            engine=self._current_engine,
+            sample_rate=16000 if self._current_engine == "piper" else 24000
+        )

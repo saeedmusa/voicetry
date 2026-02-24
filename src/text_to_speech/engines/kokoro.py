@@ -1,4 +1,4 @@
-"""Text-to-speech synthesizer using Kokoro ONNX TTS model."""
+"""Kokoro TTS engine implementation."""
 
 import os
 from pathlib import Path
@@ -13,9 +13,32 @@ except ImportError:
     Kokoro = None
     _KOKORO_AVAILABLE = False
 
-from .config import TTSConfig
+from ..config import TTSConfig
+from ..base import TTSEngine
 
 _KOKORO_INSTANCE = None
+
+_VOICES = [
+    "af_bella",
+    "af_heart",
+    "af_sarah",
+    "af_sky",
+    "am_adam",
+    "am_michael",
+    "bf_emma",
+    "bm_george",
+]
+
+_VOICE_DESCRIPTIONS = {
+    "af_bella": "Female, American",
+    "af_heart": "Female, warm",
+    "af_sarah": "Female, clear",
+    "af_sky": "Female",
+    "am_adam": "Male, American",
+    "am_michael": "Male, American",
+    "bf_emma": "Female, British",
+    "bm_george": "Male, British",
+}
 
 
 def _create_optimized_session_options():
@@ -24,29 +47,19 @@ def _create_optimized_session_options():
         import onnxruntime as ort
         
         sess_options = ort.SessionOptions()
-        
-        # Enable all graph optimizations (basic, extended, layout, etc.)
         sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-        
-        # Use parallel execution for better CPU utilization
         sess_options.execution_mode = ort.ExecutionMode.ORT_PARALLEL
-        
-        # Optimize intra-op threads - use most available cores
-        # Leave 1-2 cores free for other operations
         cpu_count = os.cpu_count() or 4
         sess_options.intra_op_num_threads = max(2, cpu_count - 1)
-        
-        # Enable memory optimization
         sess_options.enable_mem_pattern = True
         sess_options.enable_cpu_mem_arena = True
-        
         return sess_options
     except ImportError:
         return None
 
 
 def _get_kokoro() -> Kokoro:
-    """Get or create global Kokoro instance with optimized settings."""
+    """Get or create global Kokoro instance."""
     global _KOKORO_INSTANCE
     if _KOKORO_INSTANCE is None:
         cache_dir = Path.home() / ".cache" / "kokoro"
@@ -61,12 +74,10 @@ def _get_kokoro() -> Kokoro:
             model_path = hf_hub_download("fastrtc/kokoro-onnx", "kokoro-v1.0.onnx", local_dir=str(cache_dir))
             voices_path = hf_hub_download("fastrtc/kokoro-onnx", "voices-v1.0.bin", local_dir=str(cache_dir))
         
-        # Try to use optimized session options
         sess_options = _create_optimized_session_options()
         
         if sess_options is not None:
             try:
-                # Use custom session with optimizations
                 import onnxruntime as ort
                 inf_sess = ort.InferenceSession(
                     str(model_path),
@@ -76,7 +87,6 @@ def _get_kokoro() -> Kokoro:
                 _KOKORO_INSTANCE = Kokoro.from_session(inf_sess, str(voices_path))
             except Exception as e:
                 print(f"Warning: Could not use optimized session: {e}")
-                # Fall back to default
                 _KOKORO_INSTANCE = Kokoro(str(model_path), str(voices_path))
         else:
             _KOKORO_INSTANCE = Kokoro(str(model_path), str(voices_path))
@@ -84,90 +94,54 @@ def _get_kokoro() -> Kokoro:
     return _KOKORO_INSTANCE
 
 
-def _warmup_kokoro():
-    """Warm up the Kokoro model with a short synthesis."""
+def _warmup():
+    """Warm up the Kokoro model."""
     global _KOKORO_INSTANCE
     if _KOKORO_INSTANCE is not None:
         try:
-            # Quick warmup with short text
             _KOKORO_INSTANCE.create("a", voice="af_heart", speed=1.0)
         except Exception:
-            pass  # Ignore warmup errors
+            pass
 
 
-class Synthesizer:
-    """TTS synthesizer using Kokoro ONNX.
+class KokoroEngine(TTSEngine):
+    """TTS engine using Kokoro ONNX."""
+    
+    voices = _VOICES
 
-    Processes text and returns audio as numpy array at 24kHz.
-    Optimized for CPU performance.
-    """
-
-    def __init__(self, config: Optional[TTSConfig] = None, warmup: bool = True) -> None:
-        """Initialize synthesizer with TTS configuration.
-
-        Args:
-            config: TTS configuration. Uses defaults if None.
-            warmup: Whether to warm up the model on first init.
-        """
+    def __init__(self, config: Optional[TTSConfig] = None) -> None:
         self.config = config or TTSConfig()
-        self._is_warmed = False
+        self._voice = self.config.voice_name
         
         if not _KOKORO_AVAILABLE:
-            raise RuntimeError(
-                "kokoro-onnx not installed. Run: pip install kokoro-onnx"
-            )
+            raise RuntimeError("kokoro-onnx not installed. Run: pip install kokoro-onnx")
         
-        # Warm up the model in background after initialization
-        if warmup:
-            import threading
-            warmup_thread = threading.Thread(target=_warmup_kokoro, daemon=True)
-            warmup_thread.start()
+        import threading
+        warmup_thread = threading.Thread(target=_warmup, daemon=True)
+        warmup_thread.start()
 
-    def synthesize(self, text: str) -> np.ndarray:
-        """Synthesize text to audio (sync, returns full audio).
+    @property
+    def name(self) -> str:
+        return "kokoro"
 
-        Args:
-            text: Input text to synthesize.
-
-        Returns:
-            Audio samples as numpy array (float32, 24kHz).
-
-        Raises:
-            ValueError: If text is empty or synthesis fails.
-        """
-        if not text or not text.strip():
-            raise ValueError("Input text cannot be empty")
-
-        kokoro = _get_kokoro()
-        audio, _ = kokoro.create(text, voice=self.config.voice_name, speed=self.config.speed)
-        
-        return audio
-
-    async def synthesize_stream(self, text: str) -> AsyncGenerator[tuple[np.ndarray, int], None]:
-        """Synthesize text to audio stream (async, yields chunks).
-
-        Args:
-            text: Input text to synthesize.
-
-        Yields:
-            Tuple of (audio_chunk, sample_rate).
-
-        Raises:
-            ValueError: If text is empty.
-        """
-        if not text or not text.strip():
-            raise ValueError("Input text cannot be empty")
-
-        kokoro = _get_kokoro()
-        
-        async for audio_chunk, sr in kokoro.create_stream(
-            text, 
-            voice=self.config.voice_name, 
-            speed=self.config.speed
-        ):
-            yield audio_chunk, sr
+    @property
+    def voice_descriptions(self) -> dict:
+        return _VOICE_DESCRIPTIONS
 
     @property
     def sample_rate(self) -> int:
-        """Return output sample rate."""
-        return self.config.sample_rate
+        return 24000
+
+    def synthesize(self, text: str) -> np.ndarray:
+        if not text or not text.strip():
+            raise ValueError("Input text cannot be empty")
+        kokoro = _get_kokoro()
+        audio, _ = kokoro.create(text, voice=self._voice, speed=self.config.speed)
+        return audio
+
+    async def synthesize_stream(self, text: str) -> AsyncGenerator[tuple[np.ndarray, int], None]:
+        if not text or not text.strip():
+            raise ValueError("Input text cannot be empty")
+        kokoro = _get_kokoro()
+        async for audio_chunk, sr in kokoro.create_stream(text, voice=self._voice, speed=self.config.speed):
+            yield audio_chunk, sr

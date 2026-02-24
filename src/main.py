@@ -40,7 +40,7 @@ from rich.live import Live
 # Import from local modules (all modules are in src/)
 from speech_to_text import Recorder, Transcriber, SpeechToTextConfig
 from llm_processor import DeepSeekLLM
-from text_to_speech import Synthesizer, TTSPlayer, TTSConfig, VoiceSelector, get_synthesizer
+from text_to_speech import TTSPlayer, TTSConfig, VoiceSelector, get_synthesizer, TTSEngine
 from ui import VoiceTerminalUI, UIAnimator, AppState
 
 
@@ -127,7 +127,7 @@ class VoiceTryApp:
         self._recorder: Optional[Recorder] = None
         self._transcriber: Optional[Transcriber] = None
         self._llm: Optional[DeepSeekLLM] = None
-        self._synthesizer: Optional[Synthesizer] = None
+        self._synthesizer: Optional[TTSEngine] = None
         self._player: Optional[TTSPlayer] = None
 
     @property
