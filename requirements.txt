@@ -1,0 +1,22 @@
+# Audio
+sounddevice>=0.4.6
+numpy>=2.0
+soundfile>=0.12.1
+
+# Speech-to-Text (CPU-based whisper)
+faster-whisper>=1.0.0
+
+# LLM (DeepSeek uses OpenAI-compatible SDK)
+openai>=1.0.0
+
+# Text-to-Speech (ONNX-based, no PyTorch required)
+kokoro-onnx>=0.5.0
+onnxruntime>=1.20.0
+
+# Terminal UI
+rich>=13.7.0
+readchar>=4.0.5
+
+# Utilities
+python-dotenv>=1.0.0
+huggingface-hub>=0.20.0
