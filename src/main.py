@@ -226,6 +226,11 @@ and naturally, as if having a voice conversation. Keep responses relatively brie
 
     def _handle_engine_selection(self) -> None:
         """Handle TTS engine selection menu."""
+        # Don't allow engine change while speaking
+        if self._player and self._player.is_playing:
+            self.console.print("\n[yellow]Cannot change engine while speaking. Wait for audio to finish.[/]")
+            return
+        
         self.voice_selector.select_engine()
         # Reset synthesizer and player to reload with new engine
         self._synthesizer = None
@@ -233,6 +238,11 @@ and naturally, as if having a voice conversation. Keep responses relatively brie
 
     def _handle_voice_selection(self) -> None:
         """Handle voice selection menu."""
+        # Don't allow voice change while speaking
+        if self._player and self._player.is_playing:
+            self.console.print("\n[yellow]Cannot change voice while speaking. Wait for audio to finish.[/]")
+            return
+        
         selected = self.voice_selector.select_voice()
         self._synthesizer = None
         self._player = None
@@ -351,6 +361,9 @@ and naturally, as if having a voice conversation. Keep responses relatively brie
                         sentence_buffer = ""
 
                 if chunk.is_done:
+                    # Flush remaining buffer before ending
+                    if sentence_buffer.strip() and tts_started:
+                        await tts_queue.put(sentence_buffer)
                     break
 
             if not tts_started and full_response.strip():
