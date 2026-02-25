@@ -7,15 +7,13 @@ Orchestrates 4 independent modules: speech_to_text, llm_processor, text_to_speec
 """
 
 import asyncio
-import asyncio
 import os
 import sys
 import time
-import time
-
-import time
 from pathlib import Path
 from typing import Optional
+
+import numpy as np
 
 # Fix OpenMP conflict on macOS - must be set before importing any OpenMP-dependent libs
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
@@ -280,32 +278,42 @@ and naturally, as if having a voice conversation. Keep responses relatively brie
         self.ui.clear_messages()
         self.ui.set_user_message(user_text)
 
-        # Run LLM and TTS concurrently
+        # Run LLM and TTS concurrently with true parallel streaming
         async def process_response():
             full_response = ""
             sentence_buffer = ""
             tts_started = False
-            tts_queue: asyncio.Queue[str] = asyncio.Queue()
             
-            async def tts_worker():
-                nonlocal tts_started
+            # Queues for parallel pipeline
+            text_queue: asyncio.Queue[str] = asyncio.Queue()
+            audio_queue: asyncio.Queue[tuple[np.ndarray, int]] = asyncio.Queue()
+            synthesis_done = False
+            
+            async def synthesis_worker():
+                """Background worker that synthesizes text in parallel with playback."""
+                nonlocal synthesis_done
                 buffer = ""
                 
                 while True:
                     try:
-                        text = await asyncio.wait_for(tts_queue.get(), timeout=0.5)
+                        # Get text with timeout
+                        text = await asyncio.wait_for(text_queue.get(), timeout=0.3)
                         
                         if text == "END":
+                            # Flush remaining buffer
                             if buffer.strip():
                                 try:
-                                    audio_gen = self.synthesizer.synthesize_stream(buffer)
-                                    await self.player.play_stream(audio_gen)
+                                    audio = self.synthesizer.synthesize(buffer)
+                                    await audio_queue.put((audio, self.synthesizer.sample_rate))
                                 except Exception:
                                     pass
+                            synthesis_done = True
+                            await audio_queue.put((None, 0))  # Signal end
                             break
                         
                         buffer += text
                         
+                        # Extract sentences
                         while buffer:
                             for punct in ['. ', '! ', '? ', '.', '!', '?']:
                                 if punct in buffer:
@@ -315,68 +323,103 @@ and naturally, as if having a voice conversation. Keep responses relatively brie
                                     
                                     if sentence.strip():
                                         try:
-                                            audio_gen = self.synthesizer.synthesize_stream(sentence)
-                                            await self.player.play_stream(audio_gen)
+                                            # Synthesis happens here - result goes to audio_queue
+                                            audio = self.synthesizer.synthesize(sentence)
+                                            await audio_queue.put((audio, self.synthesizer.sample_rate))
                                         except Exception:
                                             pass
                                     break
                             else:
                                 if len(buffer) < 100:
                                     break
+                                # Long buffer - synthesize anyway
                                 sentence = buffer
                                 buffer = ""
                                 if sentence.strip():
                                     try:
-                                        audio_gen = self.synthesizer.synthesize_stream(sentence)
-                                        await self.player.play_stream(audio_gen)
+                                        audio = self.synthesizer.synthesize(sentence)
+                                        await audio_queue.put((audio, self.synthesizer.sample_rate))
                                     except Exception:
                                         pass
                             break
                     except asyncio.TimeoutError:
+                        # Flush any remaining buffer
                         if buffer.strip():
                             try:
-                                audio_gen = self.synthesizer.synthesize_stream(buffer)
-                                await self.player.play_stream(audio_gen)
+                                audio = self.synthesizer.synthesize(buffer)
+                                await audio_queue.put((audio, self.synthesizer.sample_rate))
                             except Exception:
                                 pass
-                        buffer = ""
-                        if tts_started and tts_queue.empty():
+                            buffer = ""
+                        if synthesis_done and text_queue.empty():
                             break
                     except Exception:
                         break
             
-            tts_task = None
+            async def playback_worker():
+                """Plays audio as it becomes available from synthesis."""
+                while True:
+                    try:
+                        audio, sr = await asyncio.wait_for(audio_queue.get(), timeout=0.5)
+                        
+                        if audio is None:  # End signal
+                            break
+                        
+                        # Play audio - this runs in parallel with synthesis
+                        await self.player.play_direct(audio, sr)
+                        
+                    except asyncio.TimeoutError:
+                        if synthesis_done and audio_queue.empty():
+                            break
+                    except Exception:
+                        pass
             
-            for chunk in self.llm.generate_stream(user_text):
-                if chunk.content:
-                    full_response += chunk.content
-                    sentence_buffer += chunk.content
-                    self.ui.append_ai_response(chunk.content)
+            try:
+                synthesis_task = None
+                playback_task = None
+                
+                for chunk in self.llm.generate_stream(user_text):
+                    if chunk.content:
+                        full_response += chunk.content
+                        sentence_buffer += chunk.content
+                        self.ui.append_ai_response(chunk.content)
+                        
+                        # Start TTS when we have enough text
+                        if not tts_started and (len(sentence_buffer) >= 30 or any(p in sentence_buffer for p in '.!?')):
+                            tts_started = True
+                            self.ui.set_state(AppState.SPEAKING)
+                            # Start both workers
+                            synthesis_task = asyncio.create_task(synthesis_worker())
+                            playback_task = asyncio.create_task(playback_worker())
+                            await text_queue.put(sentence_buffer)
+                            sentence_buffer = ""
+
+                    if chunk.is_done:
+                        # Flush remaining buffer
+                        if sentence_buffer.strip():
+                            if tts_started:
+                                await text_queue.put(sentence_buffer)
+                            else:
+                                # Too short - just play directly
+                                tts_started = True
+                                self.ui.set_state(AppState.SPEAKING)
+                                synthesis_task = asyncio.create_task(synthesis_worker())
+                                playback_task = asyncio.create_task(playback_worker())
+                                await text_queue.put(sentence_buffer)
+                        break
+
+                # Wait for synthesis to complete
+                if synthesis_task:
+                    await text_queue.put("END")
+                    await synthesis_task
                     
-                    if not tts_started and (len(sentence_buffer) >= 50 or any(p in sentence_buffer for p in '.!?')):
-                        tts_started = True
-                        self.ui.set_state(AppState.SPEAKING)
-                        tts_task = asyncio.create_task(tts_worker())
-                        await tts_queue.put(sentence_buffer)
-                        sentence_buffer = ""
-
-                if chunk.is_done:
-                    # Flush remaining buffer before ending
-                    if sentence_buffer.strip() and tts_started:
-                        await tts_queue.put(sentence_buffer)
-                    break
-
-            if not tts_started and full_response.strip():
-                self.ui.set_state(AppState.SPEAKING)
-                try:
-                    audio_gen = self.synthesizer.synthesize_stream(full_response)
-                    await self.player.play_stream(audio_gen)
-                except Exception as e:
-                    self.console.print(f"[red]TTS error: {e}[/]")
-            elif tts_started:
-                await tts_queue.put("END")
-                if tts_task:
-                    await tts_task
+                # Wait for playback to finish
+                if playback_task:
+                    await playback_task
+                    
+            except Exception as e:
+                self.console.print(f"[red]TTS error: {e}[/]")
+                self.ui.set_state(AppState.IDLE)
 
         try:
             asyncio.run(process_response())

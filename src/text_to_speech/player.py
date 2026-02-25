@@ -78,6 +78,26 @@ class TTSPlayer:
                 if self._level_callback:
                     self._level_callback(0.0)
 
+    async def play_direct(self, audio: np.ndarray, sample_rate: int) -> None:
+        """Play audio directly (for parallel pipeline).
+        
+        This is a sync wrapper around play() for use in async context.
+        
+        Args:
+            audio: Audio samples as numpy array (float32).
+            sample_rate: Sample rate of the audio.
+        """
+        # Store original sample rate
+        original_rate = self.sample_rate
+        self.sample_rate = sample_rate
+        
+        try:
+            # Run sync play in executor to not block the event loop
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, lambda: self.play(audio, blocking=True))
+        finally:
+            self.sample_rate = original_rate
+
     async def play_stream(
         self, 
         audio_generator: AsyncGenerator[tuple[np.ndarray, int], None],
