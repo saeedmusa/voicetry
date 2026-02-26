@@ -60,7 +60,8 @@ class TTSPlayer:
                 block_size = 1024
                 samples_played = 0
 
-                while sd.get_stream().active and not self._stop_flag:
+                stream = sd.get_stream()
+                while stream and stream.active and not self._stop_flag:
                     if self._level_callback:
                         end_pos = min(samples_played + block_size, len(audio))
                         if samples_played < len(audio):
@@ -166,8 +167,10 @@ class TTSPlayer:
                         
                         try:
                             stream.write(block)
-                        except:
-                            pass
+                        except Exception as e:
+                            import logging
+                            logging.warning(f"Audio write error: {e}")
+                            break
                         
                         if self._level_callback:
                             level = level_calculator(block)
@@ -180,7 +183,8 @@ class TTSPlayer:
                     audio_queue.task_done()
                     
             except Exception as e:
-                pass
+                import logging
+                logging.error(f"Playback worker error: {e}")
             finally:
                 if stream:
                     stream.stop()
@@ -211,8 +215,8 @@ class TTSPlayer:
                 try:
                     stream.stop()
                     stream.close()
-                except:
-                    pass
+                except Exception:
+                    pass  # Stream may already be closed
             self._is_playing = False
             if self._level_callback:
                 self._level_callback(0.0)
@@ -225,6 +229,6 @@ class TTSPlayer:
         self._stop_flag = True
         try:
             sd.stop()
-        except:
-            pass
+        except Exception:
+            pass  # May fail if no stream is active
         self._is_playing = False

@@ -16,8 +16,8 @@ class TTSConfig:
         engine: TTS engine to use ("kokoro" or "piper")
     """
 
-    voice_name: str = "en_US_lessac_medium"
+    voice_name: str = "af_heart"
     language: str = "en-us"
     speed: float = 1.0
-    sample_rate: int = 16000
-    engine: Literal["kokoro", "piper"] = "piper"
+    sample_rate: int = 24000
+    engine: Literal["kokoro", "piper"] = "kokoro"

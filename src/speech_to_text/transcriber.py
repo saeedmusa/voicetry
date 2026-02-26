@@ -45,7 +45,8 @@ class Transcriber:
             self._model = WhisperModel(
                 model_size,
                 device=self.config.device,
-                compute_type="float16" if self.config.device == "cuda" else "int8"
+                compute_type="float16" if self.config.device == "cuda" else "int8",
+                cpu_threads=8
             )
         return self._model
 
@@ -71,6 +72,11 @@ class Transcriber:
             if self.config.language:
                 options["language"] = self.config.language
 
+            # Latency/accuracy balanced defaults for interactive voice UX
+            options.setdefault("beam_size", 3)
+            options.setdefault("vad_filter", True)
+            options.setdefault("vad_parameters", {"min_silence_duration_ms": 300})
+            options.setdefault("condition_on_previous_text", False)
             segments, info = self.model.transcribe(temp_path, **options)
 
             # Collect all segments into text

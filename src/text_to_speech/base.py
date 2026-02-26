@@ -49,4 +49,4 @@ class TTSEngine(ABC):
         Yields:
             Tuple of (audio_chunk, sample_rate).
         """
-        pass
+        yield  # type: ignore[unreachable]

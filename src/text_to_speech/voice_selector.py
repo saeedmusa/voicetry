@@ -15,8 +15,8 @@ class VoiceSelector:
 
     def __init__(self, console: Optional[Console] = None):
         self.console = console or Console()
-        self._current_voice: str = "en_US_lessac_medium"
-        self._current_engine: str = "piper"
+        self._current_voice: str = "af_heart"
+        self._current_engine: str = "kokoro"
 
     @property
     def current_voice(self) -> str:
@@ -29,7 +29,13 @@ class VoiceSelector:
     @property
     def available_voices(self):
         engine_class = get_engine(self._current_engine)
-        return engine_class.voices  # Access as class property
+        return engine_class.voices
+
+    def _ensure_valid_voice(self) -> None:
+        """Ensure current voice is valid for current engine."""
+        voices = self.available_voices
+        if self._current_voice not in voices:
+            self._current_voice = voices[0]
 
     def get_current_engine(self):
         """Get the current engine instance to access descriptions."""
@@ -149,6 +155,8 @@ class VoiceSelector:
 
     def select_voice(self) -> str:
         """Display interactive voice selection menu with arrow keys."""
+        self._ensure_valid_voice()
+        
         import tty
         import termios
 

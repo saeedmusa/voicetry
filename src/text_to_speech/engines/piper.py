@@ -2,8 +2,10 @@
 
 import io
 import os
+import shutil
 import subprocess
 import wave
+from pathlib import Path
 from typing import AsyncGenerator, Optional
 
 import numpy as np
@@ -11,7 +13,47 @@ import numpy as np
 from ..config import TTSConfig
 from ..base import TTSEngine
 
-_PIPER_BINARY = "/Library/Frameworks/Python.framework/Versions/3.12/bin/piper"
+
+def _get_piper_binary() -> str:
+    """Find the piper binary path dynamically.
+    
+    Checks:
+    1. Environment variable PIPER_BINARY
+    2. In PATH via shutil.which
+    3. Common macOS locations
+    
+    Returns:
+        Path to piper binary
+        
+    Raises:
+        FileNotFoundError: If piper is not found
+    """
+    # Check environment variable first
+    env_path = os.environ.get("PIPER_BINARY")
+    if env_path and os.path.isfile(env_path):
+        return env_path
+    
+    # Try to find in PATH
+    path_bin = shutil.which("piper")
+    if path_bin:
+        return path_bin
+    
+    # Check common macOS paths
+    common_paths = [
+        "/opt/homebrew/bin/piper",
+        "/usr/local/bin/piper",
+        "/Library/Frameworks/Python.framework/Versions/3.12/bin/piper",
+    ]
+    for p in common_paths:
+        if os.path.isfile(p):
+            return p
+    
+    raise FileNotFoundError(
+        "Piper binary not found. Install with: brew install piper-tts or pip install piper-tts"
+    )
+
+
+_PIPER_BINARY = None
 
 _VOICES = [
     "en_US_lessac_medium",
@@ -32,21 +74,43 @@ _VOICE_DESCRIPTIONS = {
 }
 
 _VOICE_PATHS = {
-    "en_US_lessac_medium": "~/.cache/piper/en_US-lessac-medium.onnx",
-    "en_US_lessac_low": "~/.cache/piper/en_US-lessac-low.onnx",
-    "en_US_amy_medium": "~/.cache/piper/en_US-amy-medium.onnx",
-    "en_US_ryan_medium": "~/.cache/piper/en_US-ryan-medium.onnx",
-    "en_US_ljspeech_medium": "~/.cache/piper/en_US-ljspeech-medium.onnx",
-    "en_US_libritts_medium": "~/.cache/piper/en_US-libritts-medium.onnx",
+    "en_US_lessac_medium": "en/en_US/lessac/medium/en_US-lessac-medium.onnx",
+    "en_US_lessac_low": "en/en_US/lessac/low/en_US-lessac-low.onnx",
+    "en_US_amy_medium": "en/en_US/amy/medium/en_US-amy-medium.onnx",
+    "en_US_ryan_medium": "en/en_US/ryan/medium/en_US-ryan-medium.onnx",
+    "en_US_ljspeech_medium": "en/en_US/ljspeech/medium/en_US-ljspeech-medium.onnx",
+    "en_US_libritts_medium": "en/en_US/libritts/medium/en_US-libritts-medium.onnx",
 }
 
 
 def _get_voice_path(voice_name: str) -> str:
-    """Get the path to a voice model."""
+    """Get the path to a voice model, downloading if needed."""
     path = _VOICE_PATHS.get(voice_name)
     if path:
-        return os.path.expanduser(path)
-    return os.path.expanduser(_VOICE_PATHS["en_US_lessac_medium"])
+        try:
+            from huggingface_hub import hf_hub_download
+            cached_path = hf_hub_download("rhasspy/piper-voices", path)
+            # Also download the config file
+            config_path = path.replace(".onnx", ".onnx.json")
+            hf_hub_download("rhasspy/piper-voices", config_path)
+            return cached_path
+        except Exception as e:
+            print(f"Error downloading {voice_name}: {e}")
+    
+    # Fallback to default
+    try:
+        from huggingface_hub import hf_hub_download
+        default_path = "en/en_US/lessac/medium/en_US-lessac-medium.onnx"
+        cached_path = hf_hub_download("rhasspy/piper-voices", default_path)
+        hf_hub_download("rhasspy/piper-voices", default_path.replace(".onnx", ".onnx.json"))
+        return cached_path
+    except:
+        pass
+    
+    raise FileNotFoundError(
+        f"Piper voice model not found for {voice_name}. "
+        "Please download from https://github.com/rhasspy/piper/releases"
+    )
 
 
 class PiperEngine(TTSEngine):
@@ -81,6 +145,7 @@ class PiperEngine(TTSEngine):
             raise ValueError("Input text cannot be empty")
 
         voice_path = _get_voice_path(self._voice)
+        piper_binary = _get_piper_binary()
         
         if not os.path.exists(voice_path):
             raise FileNotFoundError(
@@ -89,8 +154,9 @@ class PiperEngine(TTSEngine):
             )
 
         try:
+            piper_cmd: list[str] = [piper_binary, "--model", voice_path, "--output-file", "-"]
             process = subprocess.Popen(
-                [_PIPER_BINARY, "--model", voice_path, "--output-file", "-"],
+                piper_cmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,

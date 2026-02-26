@@ -35,7 +35,8 @@ class AudioPlayer:
         # Start playback
         sd.play(audio, self.sample_rate)
 
-        while sd.get_stream().active and not self._stop_flag:
+        stream = sd.get_stream()
+        while stream and stream.active and not self._stop_flag:
             if self._level_callback:
                 # Calculate current position and level
                 end_pos = min(samples_played + block_size, len(audio))

@@ -21,13 +21,13 @@ class UIAnimator:
     Thread-safe animation loop with graceful shutdown support.
     """
 
-    def __init__(self, ui: 'VoiceTerminalUI', live: Live, fps: float = 8.0) -> None:
+    def __init__(self, ui: 'VoiceTerminalUI', live: Live, fps: float = 10.0) -> None:
         """Initialize the animation manager.
 
         Args:
             ui: Terminal UI instance with render method
             live: Rich Live display instance
-            fps: Animation frames per second (default: 8 - reduced to prevent flickering)
+            fps: Animation frames per second (default: 10)
         """
         self.ui = ui
         self.live = live
@@ -66,8 +66,7 @@ class UIAnimator:
         sleep_time = 1.0 / self._fps
         while self._running:
             try:
-                self.live.update(self.ui.render(), refresh=True)
+                self.live.update(self.ui.render())
                 time.sleep(sleep_time)
             except Exception:
-                # Silent fail - animation errors shouldn't crash the app
                 pass

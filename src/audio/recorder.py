@@ -68,8 +68,11 @@ class AudioRecorder:
     def stop_recording(self) -> np.ndarray:
         """Stop recording and return the audio data."""
         self._is_recording = False
-        self._stream.stop()
-        self._stream.close()
+        
+        if self._stream is not None:
+            self._stream.stop()
+            self._stream.close()
+            self._stream = None
 
         if not self._audio_data:
             return np.array([], dtype=np.float32)

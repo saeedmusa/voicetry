@@ -18,27 +18,13 @@ from ..base import TTSEngine
 
 _KOKORO_INSTANCE = None
 
-_VOICES = [
-    "af_bella",
-    "af_heart",
-    "af_sarah",
-    "af_sky",
-    "am_adam",
-    "am_michael",
-    "bf_emma",
-    "bm_george",
-]
 
-_VOICE_DESCRIPTIONS = {
-    "af_bella": "Female, American",
-    "af_heart": "Female, warm",
-    "af_sarah": "Female, clear",
-    "af_sky": "Female",
-    "am_adam": "Male, American",
-    "am_michael": "Male, American",
-    "bf_emma": "Female, British",
-    "bm_george": "Male, British",
-}
+def _get_kokoro_cache_dir() -> Path:
+    """Get the kokoro cache directory, configurable via environment variable."""
+    cache_env = os.environ.get("KOKORO_CACHE_DIR")
+    if cache_env:
+        return Path(cache_env)
+    return Path.home() / ".cache" / "kokoro"
 
 
 def _create_optimized_session_options():
@@ -62,7 +48,7 @@ def _get_kokoro() -> Kokoro:
     """Get or create global Kokoro instance."""
     global _KOKORO_INSTANCE
     if _KOKORO_INSTANCE is None:
-        cache_dir = Path.home() / ".cache" / "kokoro"
+        cache_dir = _get_kokoro_cache_dir()
         cache_dir.mkdir(parents=True, exist_ok=True)
         
         model_path = cache_dir / "kokoro-v1.0.onnx"
@@ -94,14 +80,37 @@ def _get_kokoro() -> Kokoro:
     return _KOKORO_INSTANCE
 
 
+_VOICES = [
+    "af_bella",
+    "af_heart",
+    "af_sarah",
+    "af_sky",
+    "am_adam",
+    "am_michael",
+    "bf_emma",
+    "bm_george",
+]
+
+_VOICE_DESCRIPTIONS = {
+    "af_bella": "Female, American",
+    "af_heart": "Female, warm",
+    "af_sarah": "Female, clear",
+    "af_sky": "Female",
+    "am_adam": "Male, American",
+    "am_michael": "Male, American",
+    "bf_emma": "Female, British",
+    "bm_george": "Male, British",
+}
+
+
 def _warmup():
     """Warm up the Kokoro model."""
     global _KOKORO_INSTANCE
-    if _KOKORO_INSTANCE is not None:
-        try:
-            _KOKORO_INSTANCE.create("a", voice="af_heart", speed=1.0)
-        except Exception:
-            pass
+    try:
+        kokoro = _get_kokoro()
+        kokoro.create("a", voice="af_heart", speed=1.0)
+    except Exception:
+        pass
 
 
 class KokoroEngine(TTSEngine):

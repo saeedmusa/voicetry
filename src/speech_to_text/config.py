@@ -9,7 +9,7 @@ class WhisperConfig:
     # Available model sizes
     MODEL_SIZES = ["tiny", "base", "small", "medium", "large"]
 
-    # Default model (balance of speed and accuracy)
+    # Default model (base for better accuracy)
     DEFAULT_MODEL = "base"
 
 

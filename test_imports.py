@@ -27,7 +27,7 @@ except Exception as e:
     sys.exit(1)
 
 try:
-    from text_to_speech import Synthesizer, TTSPlayer, TTSConfig
+    from text_to_speech import get_synthesizer, TTSPlayer, TTSConfig, VoiceSelector
     print("✓ text_to_speech imports OK")
 except Exception as e:
     print(f"✗ text_to_speech failed: {e}")
